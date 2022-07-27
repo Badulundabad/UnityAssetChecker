@@ -6,6 +6,8 @@ using UnityEngine;
 /// </summary>
 public class AssetChecker : EditorWindow
 {
+    private bool isButtonClicked;
+
     [MenuItem("Window/AssetsChecker")]
     public static void ShowWindow()
     {
@@ -15,5 +17,6 @@ public class AssetChecker : EditorWindow
     void OnGUI()
     {
         GUILayout.Label("Missing references", EditorStyles.boldLabel);
+        isButtonClicked = GUILayout.Button("Look for missing references");
     }
 }
