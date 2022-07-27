@@ -25,6 +25,16 @@ public class AssetChecker : EditorWindow
         {
             missingReferencePaths = LookForAssetPaths();
         }
+
+        if (missingReferencePaths != null && missingReferencePaths.Count > 0)
+        {
+            EditorGUILayout.BeginScrollView(new Vector2());
+            for (int i = 0; i < missingReferencePaths.Count; i++)
+            {
+                EditorGUILayout.LabelField($"{missingReferencePaths[i]}");
+            }
+            EditorGUILayout.EndScrollView();
+        }
     }
 
     /// <summary>
