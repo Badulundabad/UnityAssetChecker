@@ -21,15 +21,7 @@ public class AssetChecker : EditorWindow
 
     void OnGUI()
     {
-        Vector2 windowSize = position.size;
-        GUILayout.BeginHorizontal();
-        isUpdateLoopActive = GUILayout.Toggle(isUpdateLoopActive, "Update loop", GUILayout.Width(88), GUILayout.Height(20));
-        GUILayout.Space(10);
-        if (!isUpdateLoopActive)
-        {
-            isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
-        }
-        GUILayout.EndHorizontal();
+        DrawButtons();
         GUILayout.Label($"Missing references are found: {missingReferencePaths.Count}", EditorStyles.largeLabel);
 
         if (isUpdateLoopActive || isButtonClicked)
@@ -43,13 +35,31 @@ public class AssetChecker : EditorWindow
         }
         if (missingReferencePaths != null && missingReferencePaths.Count > 0)
         {
-            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-            for (int i = 0; i < missingReferencePaths.Count; i++)
-            {
-                EditorGUILayout.LabelField($"{missingReferencePaths[i]}");
-            }
-            EditorGUILayout.EndScrollView();
+            DrawRefList();
         }
+    }
+
+    private void DrawButtons()
+    {
+        Vector2 windowSize = position.size;
+        GUILayout.BeginHorizontal();
+        isUpdateLoopActive = GUILayout.Toggle(isUpdateLoopActive, "Update loop", GUILayout.Width(88), GUILayout.Height(20));
+        GUILayout.Space(10);
+        if (!isUpdateLoopActive)
+        {
+            isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
+        }
+        GUILayout.EndHorizontal();
+    }
+
+    private void DrawRefList()
+    {
+        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
+        for (int i = 0; i < missingReferencePaths.Count; i++)
+        {
+            EditorGUILayout.LabelField($"{missingReferencePaths[i]}");
+        }
+        EditorGUILayout.EndScrollView();
     }
 
     /// <summary>
