@@ -7,6 +7,7 @@ using UnityEngine;
 /// </summary>
 public class AssetChecker : EditorWindow
 {
+    private bool isUpdateLoopActive;
     private bool isButtonClicked;
     private List<string> missingReferencePaths = new List<string>();
     private Vector2 scrollPosition;
@@ -20,10 +21,17 @@ public class AssetChecker : EditorWindow
     void OnGUI()
     {
         Vector2 windowSize = position.size;
-        isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
+        GUILayout.BeginHorizontal();
+        isUpdateLoopActive = GUILayout.Toggle(isUpdateLoopActive, "Update loop", GUILayout.Width(88), GUILayout.Height(20));
+        GUILayout.Space(10);
+        if (!isUpdateLoopActive)
+        {
+            isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
+        }
+        GUILayout.EndHorizontal();
         GUILayout.Label($"Missing references are found: {missingReferencePaths.Count}", EditorStyles.largeLabel);
 
-        if (isButtonClicked)
+        if (isUpdateLoopActive || isButtonClicked)
         {
             UpdateMissingRefsList();
         }
