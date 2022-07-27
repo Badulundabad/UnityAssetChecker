@@ -10,10 +10,10 @@ public class AssetChecker : EditorWindow
     private int lastRefAmount;
     private bool isUpdateLoopActive;
     private bool isButtonClicked;
-    private List<string> missingReferencePaths = new List<string>();
+    private List<KeyValuePair<string, string>> missingReferencePaths;
     private Vector2 scrollPosition;
 
-    [MenuItem("Window/AssetsChecker")]
+    [MenuItem("Window/Assets Checker")]
     public static void ShowWindow()
     {
         EditorWindow.GetWindow(typeof(AssetChecker));
@@ -22,7 +22,7 @@ public class AssetChecker : EditorWindow
     void OnGUI()
     {
         DrawButtons();
-        GUILayout.Label($"Missing references are found: {missingReferencePaths.Count}", EditorStyles.largeLabel);
+        GUILayout.Label($"Missing references are found: {missingReferencePaths?.Count}", EditorStyles.largeLabel);
 
         if (isUpdateLoopActive || isButtonClicked)
         {
@@ -47,7 +47,7 @@ public class AssetChecker : EditorWindow
         GUILayout.Space(10);
         if (!isUpdateLoopActive)
         {
-            isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
+            isButtonClicked = GUILayout.Button("Find missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
         }
         GUILayout.EndHorizontal();
     }
@@ -55,9 +55,12 @@ public class AssetChecker : EditorWindow
     private void DrawRefList()
     {
         scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-        for (int i = 0; i < missingReferencePaths.Count; i++)
+        foreach (var kvp in missingReferencePaths)
         {
-            EditorGUILayout.LabelField($"{missingReferencePaths[i]}");
+            GUILayout.BeginHorizontal();
+            EditorGUILayout.LabelField($"{kvp.Key}", EditorStyles.objectField);
+            EditorGUILayout.LabelField($"{kvp.Value}", EditorStyles.objectField, GUILayout.MaxWidth(160));
+            GUILayout.EndHorizontal();
         }
         EditorGUILayout.EndScrollView();
     }
@@ -68,7 +71,7 @@ public class AssetChecker : EditorWindow
     private void UpdateMissingRefsList()
     {
         var assetPaths = AssetDatabase.GetAllAssetPaths();
-        missingReferencePaths = new List<string>(assetPaths.Length);
+        missingReferencePaths = new List<KeyValuePair<string, string>>(assetPaths.Length);
 
         for (int i = 0; i < assetPaths.Length; i++)
         {
@@ -82,7 +85,7 @@ public class AssetChecker : EditorWindow
         }
     }
 
-    private void CollectMissingRefsFromObject(List<string> list, string path, GameObject obj)
+    private void CollectMissingRefsFromObject(List<KeyValuePair<string, string>> list, string path, GameObject obj)
     {
         Component[] components = obj.GetComponents<Component>();
         for (int i = 0; i < components.Length; i++)
@@ -90,7 +93,7 @@ public class AssetChecker : EditorWindow
             Component component = components[i];
             if (!component)
             {
-                list.Add($"{path} is missing component #{i}");
+                list.Add(new KeyValuePair<string, string>(path, $"missing component #{i}"));
             }
             else
             {
@@ -102,7 +105,7 @@ public class AssetChecker : EditorWindow
                         && serializedProperty.objectReferenceValue == null
                         && serializedProperty.objectReferenceInstanceIDValue != 0)
                     {
-                        list.Add($"{path}/{component.GetType().Name} is missing reference");
+                        list.Add(new KeyValuePair<string, string>(path, $"{component.GetType().Name}"));
                     }
                 }
             }
