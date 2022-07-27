@@ -25,7 +25,7 @@ public class AssetChecker : EditorWindow
 
         if (isButtonClicked)
         {
-            missingReferencePaths = LookForAssetPaths();
+            UpdateMissingRefsList();
         }
         if (missingReferencePaths != null && missingReferencePaths.Count > 0)
         {
@@ -39,13 +39,12 @@ public class AssetChecker : EditorWindow
     }
 
     /// <summary>
-    /// 
+    /// Updates missingReferencePaths field
     /// </summary>
-    /// <returns>Returnes array of missing reference paths</returns>
-    private List<string> LookForAssetPaths()
+    private void UpdateMissingRefsList()
     {
         var assetPaths = AssetDatabase.GetAllAssetPaths();
-        List<string> result = new List<string>(assetPaths.Length);
+        missingReferencePaths = new List<string>(assetPaths.Length);
 
         for (int i = 0; i < assetPaths.Length; i++)
         {
@@ -54,10 +53,40 @@ public class AssetChecker : EditorWindow
             {
                 GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (obj != null)
-                    result.Add(path);
+                    CollectMissingRefsFromObject(missingReferencePaths, path, obj);
             }
         }
+    }
 
-        return result;
+    private void CollectMissingRefsFromObject(List<string> list, string path, GameObject obj)
+    {
+        Component[] components = obj.GetComponents<Component>();
+        for (int i = 0; i < components.Length; i++)
+        {
+            Component component = components[i];
+            if (!component)
+            {
+                list.Add($"{path} is missing component #{i}");
+            }
+            else
+            {
+                var serializedObject = new SerializedObject(component);
+                var serializedProperty = serializedObject.GetIterator();
+                while (serializedProperty.NextVisible(true))
+                {
+                    if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
+                        && serializedProperty.objectReferenceValue == null
+                        && serializedProperty.objectReferenceInstanceIDValue != 0)
+                    {
+                        list.Add($"{path}/{component.GetType().Name} is missing reference");
+                    }
+                }
+            }
+        }
+        for (int i = 0; i < obj.transform.childCount; i++)
+        {
+            GameObject child = obj.transform.GetChild(i).gameObject;
+            CollectMissingRefsFromObject(list, $"{path}/{child.name}", child);
+        }
     }
 }
