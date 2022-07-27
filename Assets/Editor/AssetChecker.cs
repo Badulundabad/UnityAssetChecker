@@ -8,7 +8,8 @@ using UnityEngine;
 public class AssetChecker : EditorWindow
 {
     private bool isButtonClicked;
-    private List<string> missingReferencePaths;
+    private List<string> missingReferencePaths = new List<string>();
+    private Vector2 scrollPosition;
 
     [MenuItem("Window/AssetsChecker")]
     public static void ShowWindow()
@@ -18,17 +19,17 @@ public class AssetChecker : EditorWindow
 
     void OnGUI()
     {
-        GUILayout.Label("Missing references", EditorStyles.boldLabel);
-        isButtonClicked = GUILayout.Button("Look for missing references");
+        Vector2 windowSize = position.size;
+        isButtonClicked = GUILayout.Button("Look for missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
+        GUILayout.Label($"Missing references are found: {missingReferencePaths.Count}", EditorStyles.largeLabel);
 
         if (isButtonClicked)
         {
             missingReferencePaths = LookForAssetPaths();
         }
-
         if (missingReferencePaths != null && missingReferencePaths.Count > 0)
         {
-            EditorGUILayout.BeginScrollView(new Vector2());
+            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
             for (int i = 0; i < missingReferencePaths.Count; i++)
             {
                 EditorGUILayout.LabelField($"{missingReferencePaths[i]}");
