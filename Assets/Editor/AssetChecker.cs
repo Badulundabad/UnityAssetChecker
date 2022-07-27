@@ -7,6 +7,7 @@ using UnityEngine;
 /// </summary>
 public class AssetChecker : EditorWindow
 {
+    private int lastRefAmount;
     private bool isUpdateLoopActive;
     private bool isButtonClicked;
     private List<string> missingReferencePaths = new List<string>();
@@ -34,6 +35,11 @@ public class AssetChecker : EditorWindow
         if (isUpdateLoopActive || isButtonClicked)
         {
             UpdateMissingRefsList();
+            if (lastRefAmount != missingReferencePaths.Count)
+            {
+                Debug.LogError($"Asset checker has found {missingReferencePaths.Count} missing references");
+                lastRefAmount = missingReferencePaths.Count;
+            }
         }
         if (missingReferencePaths != null && missingReferencePaths.Count > 0)
         {
