@@ -1,0 +1,10 @@
+{
+  "name": "com.dmitriygrin.assetchecker",
+  "version": "1.0.0",
+  "displayName": "Asset Checker",
+  "description": "A tool that looks for missing references in your Asset folder.",
+  "unity": "2021.3.5f1",
+  "author": {
+    "name": "Dmitriy Grin"    
+  }
+}
