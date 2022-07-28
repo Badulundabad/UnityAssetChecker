@@ -1,119 +1,116 @@
+using System;
+using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
+using Unity.EditorCoroutines.Editor;
 
-/// <summary>
-/// This tool looks for missing references in Assets folder
-/// </summary>
-public class AssetChecker : EditorWindow
+
+namespace Assets.Editor
 {
-    private int lastRefAmount;
-    private bool isUpdateLoopActive;
-    private bool isButtonClicked;
-    private List<KeyValuePair<string, string>> missingReferencePaths;
-    private Vector2 scrollPosition;
-
-    [MenuItem("Window/Assets Checker")]
-    public static void ShowWindow()
+    /// <summary>
+    /// This tool looks for missing references in Assets folder
+    /// </summary>
+    public class AssetChecker : EditorWindow
     {
-        EditorWindow.GetWindow(typeof(AssetChecker));
-    }
+        private int currentProgress;
+        private bool isCheckInProgress;
+        private List<KeyValuePair<string, string>> missingReferences;
+        private EditorWindow resultWindow;
+        private event Action OnCheckComplete;
 
-    void OnGUI()
-    {
-        DrawButtons();
-        GUILayout.Label($"Missing references are found: {missingReferencePaths?.Count}", EditorStyles.largeLabel);
-
-        if (isUpdateLoopActive || isButtonClicked)
+        [MenuItem("Window/Asset Checker")]
+        public static void ShowWindow()
         {
-            UpdateMissingRefsList();
-            if (lastRefAmount != missingReferencePaths.Count)
+            var assetChecker = EditorWindow.GetWindow<AssetChecker>("Asset Checker");
+            assetChecker.minSize = new Vector2(161, 40);
+            assetChecker.maxSize = new Vector2(161, 0);
+        }
+
+        private void OnEnable()
+        {
+            isCheckInProgress = false;
+            OnCheckComplete += ShowResult;
+        }
+
+        private void OnDestroy()
+        {
+            OnCheckComplete -= ShowResult;
+        }
+
+        void OnGUI()
+        {
+            if (!isCheckInProgress)
             {
-                Debug.LogError($"Asset checker has found {missingReferencePaths.Count} missing references");
-                lastRefAmount = missingReferencePaths.Count;
+                if (GUILayout.Button("Check assets", GUILayout.Width(position.size.x), GUILayout.MaxWidth(155)))
+                {
+                    if (resultWindow != null)
+                        resultWindow.Close();
+                    EditorCoroutineUtility.StartCoroutine(Check(), this);
+                }
+            }
+            if (isCheckInProgress)
+            {
+                GUILayout.Label("Checking...", EditorStyles.largeLabel);
+                GUILayout.Label($"Already found: {currentProgress}", EditorStyles.largeLabel);
             }
         }
-        if (missingReferencePaths != null && missingReferencePaths.Count > 0)
+
+        private void ShowResult()
         {
-            DrawRefList();
+            resultWindow = AssetCheckerResult.ShowResult(missingReferences);
         }
-    }
 
-    private void DrawButtons()
-    {
-        Vector2 windowSize = position.size;
-        GUILayout.BeginHorizontal();
-        isUpdateLoopActive = GUILayout.Toggle(isUpdateLoopActive, "Update loop", GUILayout.Width(88), GUILayout.Height(20));
-        GUILayout.Space(10);
-        if (!isUpdateLoopActive)
+        private IEnumerator Check()
         {
-            isButtonClicked = GUILayout.Button("Find missing references", GUILayout.Width(windowSize.x), GUILayout.MaxWidth(200));
-        }
-        GUILayout.EndHorizontal();
-    }
-
-    private void DrawRefList()
-    {
-        scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-        foreach (var kvp in missingReferencePaths)
-        {
-            GUILayout.BeginHorizontal();
-            EditorGUILayout.LabelField($"{kvp.Key}", EditorStyles.objectField);
-            EditorGUILayout.LabelField($"{kvp.Value}", EditorStyles.objectField, GUILayout.MaxWidth(160));
-            GUILayout.EndHorizontal();
-        }
-        EditorGUILayout.EndScrollView();
-    }
-
-    /// <summary>
-    /// Updates missingReferencePaths field
-    /// </summary>
-    private void UpdateMissingRefsList()
-    {
-        var assetPaths = AssetDatabase.GetAllAssetPaths();
-        missingReferencePaths = new List<KeyValuePair<string, string>>(assetPaths.Length);
-
-        for (int i = 0; i < assetPaths.Length; i++)
-        {
-            string path = assetPaths[i];
-            if (path.StartsWith("Assets"))
+            isCheckInProgress = true;
+            missingReferences = new List<KeyValuePair<string, string>>();
+            var assetPaths = AssetDatabase.GetAllAssetPaths();
+            for (int i = 0; i < assetPaths.Length; i++)
             {
+                string path = assetPaths[i];
                 GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (obj != null)
-                    CollectMissingRefsFromObject(missingReferencePaths, path, obj);
+                    CollectMissingRefsFromObject(missingReferences, path, obj);
+                yield return null;
             }
+            currentProgress = 0;
+            isCheckInProgress = false;
+            OnCheckComplete?.Invoke();
         }
-    }
 
-    private void CollectMissingRefsFromObject(List<KeyValuePair<string, string>> list, string path, GameObject obj)
-    {
-        Component[] components = obj.GetComponents<Component>();
-        for (int i = 0; i < components.Length; i++)
+        private void CollectMissingRefsFromObject(List<KeyValuePair<string, string>> list, string path, GameObject obj)
         {
-            Component component = components[i];
-            if (!component)
+            Component[] components = obj.GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
             {
-                list.Add(new KeyValuePair<string, string>(path, $"missing component #{i}"));
-            }
-            else
-            {
-                var serializedObject = new SerializedObject(component);
-                var serializedProperty = serializedObject.GetIterator();
-                while (serializedProperty.NextVisible(true))
+                Component component = components[i];
+                if (!component)
                 {
-                    if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
-                        && serializedProperty.objectReferenceValue == null
-                        && serializedProperty.objectReferenceInstanceIDValue != 0)
+                    currentProgress++;
+                    list.Add(new KeyValuePair<string, string>(path, $"missing component #{i}"));
+                }
+                else
+                {
+                    var serializedObject = new SerializedObject(component);
+                    var serializedProperty = serializedObject.GetIterator();
+                    while (serializedProperty.NextVisible(true))
                     {
-                        list.Add(new KeyValuePair<string, string>(path, $"{component.GetType().Name}"));
+                        if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
+                            && serializedProperty.objectReferenceValue == null
+                            && serializedProperty.objectReferenceInstanceIDValue != 0)
+                        {
+                            currentProgress++;
+                            list.Add(new KeyValuePair<string, string>(path, $"{component.GetType().Name}"));
+                        }
                     }
                 }
             }
-        }
-        for (int i = 0; i < obj.transform.childCount; i++)
-        {
-            GameObject child = obj.transform.GetChild(i).gameObject;
-            CollectMissingRefsFromObject(list, $"{path}/{child.name}", child);
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                GameObject child = obj.transform.GetChild(i).gameObject;
+                CollectMissingRefsFromObject(list, $"{path}/{child.name}", child);
+            }
         }
     }
 }
