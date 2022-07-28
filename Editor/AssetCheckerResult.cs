@@ -2,14 +2,14 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Assets.Editor
+namespace AssetChecker
 {
     public class AssetCheckerResult : EditorWindow
     {
         private Vector2 scrollPosition;
-        private List<KeyValuePair<string, string>> list;
+        private List<Object> list;
 
-        public static EditorWindow ShowResult(List<KeyValuePair<string, string>> list)
+        public static EditorWindow ShowResult(List<Object> list)
         {
             var window = EditorWindow.GetWindow<AssetCheckerResult>("Asset Checker Result");
             window.SetContext(list);
@@ -17,7 +17,7 @@ namespace Assets.Editor
             return window;
         }
 
-        private void SetContext(List<KeyValuePair<string, string>> list)
+        private void SetContext(List<Object> list)
         {
             this.list = list;
         }
@@ -32,11 +32,15 @@ namespace Assets.Editor
             if (list != null)
             {
                 scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-                foreach (var kvp in list)
+                foreach (var obj in list)
                 {
+                    string path = AssetDatabase.GetAssetPath(obj);
                     GUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField($"{kvp.Key}", EditorStyles.objectField);
-                    EditorGUILayout.LabelField($"{kvp.Value}", EditorStyles.objectField, GUILayout.MaxWidth(160));
+                    GUILayout.Label($"{path}", EditorStyles.boldLabel, GUILayout.Height(25));
+                    if (GUILayout.Button($"{obj.name}", EditorStyles.textArea, GUILayout.MaxWidth(160), GUILayout.Height(25)))
+                    {
+                        ProjectWindowUtil.ShowCreatedAsset(obj);
+                    }
                     GUILayout.EndHorizontal();
                 }
                 EditorGUILayout.EndScrollView();

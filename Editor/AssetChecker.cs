@@ -1,21 +1,18 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEditor;
 using UnityEngine;
-using Unity.EditorCoroutines.Editor;
+using Object = UnityEngine.Object;
 
-
-namespace Assets.Editor
+namespace AssetChecker
 {
     /// <summary>
     /// This tool looks for missing references in Assets folder
     /// </summary>
     public class AssetChecker : EditorWindow
     {
-        private int currentProgress;
         private bool isCheckInProgress;
-        private List<KeyValuePair<string, string>> missingReferences;
+        private List<Object> foundObjects;
         private EditorWindow resultWindow;
         private event Action OnCheckComplete;
 
@@ -46,70 +43,59 @@ namespace Assets.Editor
                 {
                     if (resultWindow != null)
                         resultWindow.Close();
-                    EditorCoroutineUtility.StartCoroutine(Check(), this);
+                    RunCheck();
                 }
-            }
-            if (isCheckInProgress)
-            {
-                GUILayout.Label("Checking...", EditorStyles.largeLabel);
-                GUILayout.Label($"Already found: {currentProgress}", EditorStyles.largeLabel);
             }
         }
 
         private void ShowResult()
         {
-            resultWindow = AssetCheckerResult.ShowResult(missingReferences);
+            resultWindow = AssetCheckerResult.ShowResult(foundObjects);
         }
 
-        private IEnumerator Check()
+        private void RunCheck()
         {
             isCheckInProgress = true;
-            missingReferences = new List<KeyValuePair<string, string>>();
-            var assetPaths = AssetDatabase.GetAllAssetPaths();
-            for (int i = 0; i < assetPaths.Length; i++)
+            foundObjects = new List<Object>();
+
+            string[] paths = AssetDatabase.GetAllAssetPaths();
+            for (int i = 0; i < paths.Length; i++)
             {
-                string path = assetPaths[i];
-                GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
-                if (obj != null)
-                    CollectMissingRefsFromObject(missingReferences, path, obj);
-                yield return null;
+                GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
+                if (obj)
+                {
+                    CheckObject(obj);
+                }
             }
-            currentProgress = 0;
             isCheckInProgress = false;
             OnCheckComplete?.Invoke();
         }
 
-        private void CollectMissingRefsFromObject(List<KeyValuePair<string, string>> list, string path, GameObject obj)
+        private void CheckObject(GameObject obj)
         {
-            Component[] components = obj.GetComponents<Component>();
-            for (int i = 0; i < components.Length; i++)
+            var hierarchyObjects = EditorUtility.CollectDeepHierarchy(new GameObject[] { obj });
+            for (int i = 0; i < hierarchyObjects.Length; i++)
             {
-                Component component = components[i];
-                if (!component)
-                {
-                    currentProgress++;
-                    list.Add(new KeyValuePair<string, string>(path, $"missing component #{i}"));
-                }
+                var item = hierarchyObjects[i];
+                if (!item)
+                    foundObjects.Add(obj);
                 else
-                {
-                    var serializedObject = new SerializedObject(component);
-                    var serializedProperty = serializedObject.GetIterator();
-                    while (serializedProperty.NextVisible(true))
-                    {
-                        if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
-                            && serializedProperty.objectReferenceValue == null
-                            && serializedProperty.objectReferenceInstanceIDValue != 0)
-                        {
-                            currentProgress++;
-                            list.Add(new KeyValuePair<string, string>(path, $"{component.GetType().Name}"));
-                        }
-                    }
-                }
+                    CheckObjectComponents(item);
             }
-            for (int i = 0; i < obj.transform.childCount; i++)
+        }
+
+        private void CheckObjectComponents(Object obj)
+        {
+            var serializedObject = new SerializedObject(obj);
+            var serializedProperty = serializedObject.GetIterator();
+            while (serializedProperty.NextVisible(true))
             {
-                GameObject child = obj.transform.GetChild(i).gameObject;
-                CollectMissingRefsFromObject(list, $"{path}/{child.name}", child);
+                if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
+                    && serializedProperty.objectReferenceValue == null
+                    && serializedProperty.objectReferenceInstanceIDValue != 0)
+                {
+                    foundObjects.Add(obj);
+                }
             }
         }
     }
