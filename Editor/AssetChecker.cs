@@ -43,7 +43,7 @@ namespace AssetChecker
                 {
                     if (resultWindow != null)
                         resultWindow.Close();
-                    RunCheck();
+                    RunAssetCheck();
                 }
             }
         }
@@ -53,7 +53,7 @@ namespace AssetChecker
             resultWindow = AssetCheckerResult.ShowResult(foundObjects);
         }
 
-        private void RunCheck()
+        private void RunAssetCheck()
         {
             isCheckInProgress = true;
             foundObjects = new List<Object>();
@@ -64,29 +64,29 @@ namespace AssetChecker
                 GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
                 if (obj)
                 {
-                    CheckObject(obj);
+                    CheckGameObject(obj);
                 }
             }
             isCheckInProgress = false;
             OnCheckComplete?.Invoke();
         }
 
-        private void CheckObject(GameObject obj)
+        private void CheckGameObject(GameObject obj)
         {
-            var hierarchyObjects = EditorUtility.CollectDeepHierarchy(new GameObject[] { obj });
-            for (int i = 0; i < hierarchyObjects.Length; i++)
+            var components = obj.GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
             {
-                var item = hierarchyObjects[i];
-                if (!item)
+                var component = components[i];
+                if (!component)
                     foundObjects.Add(obj);
                 else
-                    CheckObjectComponents(item);
+                    CheckComponentProperties(component);
             }
         }
 
-        private void CheckObjectComponents(Object obj)
+        private void CheckComponentProperties(Component component)
         {
-            var serializedObject = new SerializedObject(obj);
+            var serializedObject = new SerializedObject(component);
             var serializedProperty = serializedObject.GetIterator();
             while (serializedProperty.NextVisible(true))
             {
@@ -94,7 +94,7 @@ namespace AssetChecker
                     && serializedProperty.objectReferenceValue == null
                     && serializedProperty.objectReferenceInstanceIDValue != 0)
                 {
-                    foundObjects.Add(obj);
+                    foundObjects.Add(component);
                 }
             }
         }
