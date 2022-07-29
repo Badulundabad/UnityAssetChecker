@@ -31,13 +31,13 @@ namespace AssetChecker
         {
             if (list != null)
             {
-                scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
+                scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, EditorStyles.helpBox);
                 foreach (var obj in list)
                 {
                     string path = AssetDatabase.GetAssetPath(obj);
                     GUILayout.BeginHorizontal();
                     GUILayout.Label($"{path}", EditorStyles.boldLabel, GUILayout.Height(25));
-                    if (GUILayout.Button($"{obj.name}", EditorStyles.textArea, GUILayout.MaxWidth(160), GUILayout.Height(25)))
+                    if (GUILayout.Button($"{obj.GetType().Name}", EditorStyles.textArea, GUILayout.MaxWidth(160), GUILayout.Height(25)))
                     {
                         ProjectWindowUtil.ShowCreatedAsset(obj);
                     }
