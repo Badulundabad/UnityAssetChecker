@@ -2,45 +2,44 @@
 using UnityEditor;
 using UnityEngine;
 
-namespace Assets.Editor
+namespace AssetChecker
 {
     public class AssetCheckerResult : EditorWindow
     {
         private Vector2 scrollPosition;
-        private List<KeyValuePair<string, string>> list;
+        internal List<Object> list;
 
-        public static EditorWindow ShowResult(List<KeyValuePair<string, string>> list)
+        public static EditorWindow ShowResult(List<Object> list)
         {
             var window = EditorWindow.GetWindow<AssetCheckerResult>("Asset Checker Result");
-            window.SetContext(list);
+            window.list = list;
             window.minSize = new Vector2(300, 200);
             return window;
         }
 
-        private void SetContext(List<KeyValuePair<string, string>> list)
-        {
-            this.list = list;
-        }
-
         private void OnGUI()
         {
-            DrawRefList();
+            if (list != null)
+            {
+                DrawRefList();
+            }
         }
 
         private void DrawRefList()
         {
-            if (list != null)
+            scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition, EditorStyles.helpBox);
+            foreach (var obj in list)
             {
-                scrollPosition = EditorGUILayout.BeginScrollView(scrollPosition);
-                foreach (var kvp in list)
+                string path = AssetDatabase.GetAssetPath(obj);
+                GUILayout.BeginHorizontal();
+                GUILayout.Label($"{path}", EditorStyles.boldLabel, GUILayout.Height(25));
+                if (GUILayout.Button($"{obj.GetType().Name}", EditorStyles.textArea, GUILayout.MaxWidth(160), GUILayout.Height(25)))
                 {
-                    GUILayout.BeginHorizontal();
-                    EditorGUILayout.LabelField($"{kvp.Key}", EditorStyles.objectField);
-                    EditorGUILayout.LabelField($"{kvp.Value}", EditorStyles.objectField, GUILayout.MaxWidth(160));
-                    GUILayout.EndHorizontal();
+                    ProjectWindowUtil.ShowCreatedAsset(obj);
                 }
-                EditorGUILayout.EndScrollView();
+                GUILayout.EndHorizontal();
             }
+            EditorGUILayout.EndScrollView();
         }
     }
 }
