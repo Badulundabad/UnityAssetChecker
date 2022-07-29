@@ -3,9 +3,6 @@
   "version": "1.0.0",
   "displayName": "Asset Checker",
   "description": "A tool that looks for missing references in your Asset folder.",
-  "dependencies": {
-    "com.unity.editorcoroutines": "1.0.0"
-  },
   "unity": "2021.3.5f1",
   "author": {
     "name": "Dmitriy Grin"    
