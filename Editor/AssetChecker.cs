@@ -82,6 +82,11 @@ namespace AssetChecker
                 else
                     CheckComponentProperties(component);
             }
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                GameObject child = obj.transform.GetChild(i).gameObject;
+                CheckGameObject(child);
+            }
         }
 
         private void CheckComponentProperties(Component component)
