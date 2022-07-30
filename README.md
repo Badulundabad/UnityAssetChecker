@@ -34,3 +34,7 @@ You can press on any element in the right column to select asset.
     - `serializedProperty.objectReferenceValue == null` (has no or missed reference)
 
 I used this logic, cause of the only one way i found.
+
+## TO DO ##
+
+It also can be useful to add check of objects on scenes that can be reached through `EditorSceneManager.OpenScene()` and `Scene.GetRootGameObjects()`
