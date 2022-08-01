@@ -1,8 +1,8 @@
-using System;
 using System.Collections.Generic;
 using UnityEditor;
+using UnityEditor.SceneManagement;
 using UnityEngine;
-using Object = UnityEngine.Object;
+using UnityEngine.SceneManagement;
 
 namespace AssetChecker
 {
@@ -12,9 +12,10 @@ namespace AssetChecker
     public class AssetChecker : EditorWindow
     {
         private bool isCheckInProgress;
-        private List<Object> foundObjects;
+        private List<MissingObjectData> assetObjects;
+        private List<MissingObjectData> sceneObjects;
         private EditorWindow resultWindow;
-        private event Action OnCheckComplete;
+        public static readonly string UNKNOWN = "Unknown";
 
         [MenuItem("Window/Asset Checker")]
         public static void ShowWindow()
@@ -27,12 +28,6 @@ namespace AssetChecker
         private void OnEnable()
         {
             isCheckInProgress = false;
-            OnCheckComplete += ShowResult;
-        }
-
-        private void OnDestroy()
-        {
-            OnCheckComplete -= ShowResult;
         }
 
         void OnGUI()
@@ -43,55 +38,90 @@ namespace AssetChecker
                 {
                     if (resultWindow != null)
                         resultWindow.Close();
-                    RunAssetCheck();
+                    isCheckInProgress = true;
+                    assetObjects = new List<MissingObjectData>();
+                    sceneObjects = new List<MissingObjectData>();
+                    RunAssetsCheck();
+                    RunSceneObjectsCheck();
+                    isCheckInProgress = false;
+                    ShowResult();
                 }
             }
         }
 
         private void ShowResult()
         {
-            resultWindow = AssetCheckerResult.ShowResult(foundObjects);
+            resultWindow = AssetCheckerResult.ShowResult(assetObjects, sceneObjects);
         }
 
-        private void RunAssetCheck()
+        private void RunAssetsCheck()
         {
-            isCheckInProgress = true;
-            foundObjects = new List<Object>();
-
             string[] paths = AssetDatabase.GetAllAssetPaths();
             for (int i = 0; i < paths.Length; i++)
             {
-                GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(paths[i]);
+                string path = paths[i];
+                GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
                 if (obj)
                 {
-                    CheckGameObject(obj);
+                    CheckGameObject(path, obj);
                 }
-            }
-            isCheckInProgress = false;
-            OnCheckComplete?.Invoke();
+            }           
         }
 
-        private void CheckGameObject(GameObject obj)
+        private void RunSceneObjectsCheck()
+        {
+            for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
+            {
+                var scnConf = EditorBuildSettings.scenes[i];
+                Scene scene = EditorSceneManager.OpenScene(scnConf.path);
+                GameObject[] sceneRootObjects = scene.GetRootGameObjects();
+                for (int j = 0; j < sceneRootObjects.Length; j++)
+                {
+                    GameObject obj = sceneRootObjects[j];
+                    CheckGameObject(scene.name, scene.path, obj, j);
+                }
+            }
+        }
+        
+        private void CheckGameObject(string assetPath, GameObject obj)
         {
             var components = obj.GetComponents<Component>();
             for (int i = 0; i < components.Length; i++)
             {
                 var component = components[i];
                 if (!component)
-                    foundObjects.Add(obj);
+                    assetObjects.Add(new MissingObjectData(assetPath, obj.name, UNKNOWN));
                 else
-                    CheckComponentProperties(component);
+                    CheckComponentProperties(assetPath, component);
             }
             for (int i = 0; i < obj.transform.childCount; i++)
             {
                 GameObject child = obj.transform.GetChild(i).gameObject;
-                CheckGameObject(child);
+                CheckGameObject(assetPath, child);
             }
         }
 
-        private void CheckComponentProperties(Component component)
+        private void CheckGameObject(string sceneName, string scenePath, GameObject obj, int objIndex)
         {
-            var serializedObject = new SerializedObject(component);
+            var components = obj.GetComponents<Component>();
+            for (int i = 0; i < components.Length; i++)
+            {
+                var component = components[i];
+                if (!component)
+                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, obj.name, UNKNOWN, objIndex));
+                else
+                    CheckComponentProperties(scenePath, sceneName, obj.name, component, objIndex);
+            }
+            for (int i = 0; i < obj.transform.childCount; i++)
+            {
+                GameObject child = obj.transform.GetChild(i).gameObject;
+                CheckGameObject(scenePath, sceneName, child, objIndex);
+            }
+        }
+
+        private void CheckComponentProperties(string assetPath, Component comp)
+        {
+            var serializedObject = new SerializedObject(comp);
             var serializedProperty = serializedObject.GetIterator();
             while (serializedProperty.NextVisible(true))
             {
@@ -99,7 +129,22 @@ namespace AssetChecker
                     && serializedProperty.objectReferenceValue == null
                     && serializedProperty.objectReferenceInstanceIDValue != 0)
                 {
-                    foundObjects.Add(component);
+                    assetObjects.Add(new MissingObjectData(assetPath, comp.name, comp.GetType().Name));
+                }
+            }
+        }
+
+        private void CheckComponentProperties(string scenePath, string sceneName, string ownerName, Component comp, int objIndex)
+        {
+            var serializedObject = new SerializedObject(comp);
+            var serializedProperty = serializedObject.GetIterator();
+            while (serializedProperty.NextVisible(true))
+            {
+                if (serializedProperty.propertyType == SerializedPropertyType.ObjectReference
+                    && serializedProperty.objectReferenceValue == null
+                    && serializedProperty.objectReferenceInstanceIDValue != 0)
+                {
+                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, ownerName, comp.GetType().Name, objIndex));
                 }
             }
         }
