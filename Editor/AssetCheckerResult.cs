@@ -2,6 +2,7 @@
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.SceneManagement;
 
 namespace AssetChecker
 {
@@ -14,10 +15,10 @@ namespace AssetChecker
         private Vector2 assetScrollPos;
         private Vector2 sceneScrollPos;
         private bool canShowContent;
-        private List<AssetObjectData> assetObjects;
-        private List<SceneObjectData> sceneObjects;
+        private List<MissingObjectData> assetObjects;
+        private List<MissingObjectData> sceneObjects;
 
-        public static EditorWindow ShowResult(List<AssetObjectData> assetObjects, List<SceneObjectData> sceneObjects)
+        public static EditorWindow ShowResult(List<MissingObjectData> assetObjects, List<MissingObjectData> sceneObjects)
         {
             var window = EditorWindow.GetWindow<AssetCheckerResult>("Asset Checker Result");
             window.assetObjects = assetObjects;
@@ -33,16 +34,18 @@ namespace AssetChecker
             {
                 mainScrollPos = EditorGUILayout.BeginScrollView(mainScrollPos);
 
-                isAssetFoldoutOn = EditorGUILayout.Foldout(isAssetFoldoutOn, "Asset Objects");
-                if (assetObjects != null && assetObjects.Count > 0 && isAssetFoldoutOn)
+                if (assetObjects != null && assetObjects.Count > 0)
                 {
-                    DrawAssetObjectList();
+                    isAssetFoldoutOn = EditorGUILayout.Foldout(isAssetFoldoutOn, "Asset Objects");
+                    if (isAssetFoldoutOn)
+                        DrawAssetObjectList();
                 }
 
-                isSceneFoldoutOn = EditorGUILayout.Foldout(isSceneFoldoutOn, "Scene Objects");
-                if (sceneObjects != null && sceneObjects.Count > 0 && isSceneFoldoutOn)
+                if (sceneObjects != null && sceneObjects.Count > 0)
                 {
-                    DrawSceneObjectList();
+                    isSceneFoldoutOn = EditorGUILayout.Foldout(isSceneFoldoutOn, "Scene Objects");
+                    if (isSceneFoldoutOn)
+                        DrawSceneObjectList();
                 }
 
                 EditorGUILayout.EndScrollView();
@@ -54,14 +57,14 @@ namespace AssetChecker
             assetScrollPos = EditorGUILayout.BeginScrollView(assetScrollPos, EditorStyles.helpBox);
             for (int i = 0; i < assetObjects.Count; i++)
             {
-                AssetObjectData data = assetObjects[i];
+                MissingObjectData data = assetObjects[i];
                 GUILayout.BeginHorizontal();
-                GUILayout.Label($"{data.Owner}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
+                GUILayout.Label($"{data.ObjectName}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
                 GUILayout.Label($"{data.Component}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
                 GUILayout.Label("", GUILayout.Height(25), GUILayout.MinWidth(100)); // Just for better UI
                 if (GUILayout.Button(buttonImage, GUILayout.Height(25), GUILayout.Width(25)))
-                {                   
-                    Object obj = AssetDatabase.LoadAssetAtPath<Object>(data.AssetPath);
+                {
+                    Object obj = AssetDatabase.LoadAssetAtPath<Object>(data.ObjectPath);
                     if (data.Component == AssetChecker.UNKNOWN)
                     {
                         AssetDatabase.OpenAsset(obj);
@@ -81,16 +84,25 @@ namespace AssetChecker
             sceneScrollPos = EditorGUILayout.BeginScrollView(sceneScrollPos, EditorStyles.helpBox);
             for (int i = 0; i < sceneObjects.Count; i++)
             {
-                SceneObjectData objectData = sceneObjects[i];
+                MissingObjectData objectData = sceneObjects[i];
                 GUILayout.BeginHorizontal();
                 GUILayout.Label($"{objectData.SceneName}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
-                GUILayout.Label($"{objectData.Owner}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
+                GUILayout.Label($"{objectData.ObjectName}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
                 GUILayout.Label($"{objectData.Component}", EditorStyles.boldLabel, GUILayout.Height(25), GUILayout.MinWidth(100));
                 if (GUILayout.Button(buttonImage, GUILayout.Height(25), GUILayout.Width(25)))
                 {
-                    if (EditorUtility.DisplayDialog("Warning", $"Load {objectData.SceneName} scene?", "Yes", "No"))
+                    Scene scene = EditorSceneManager.GetActiveScene();
+                    if (scene.path != objectData.ScenePath)
                     {
-                        EditorSceneManager.OpenScene(objectData.ScenePath, OpenSceneMode.Single);
+                        if (EditorUtility.DisplayDialog("Warning", $"Load {objectData.SceneName} scene?", "Yes", "No"))
+                        {
+                            scene = EditorSceneManager.OpenScene(objectData.ScenePath, OpenSceneMode.Single);
+                            ProjectWindowUtil.ShowCreatedAsset(scene.GetRootGameObjects()[objectData.ObjectSceneIndex]);
+                        }
+                    }
+                    else
+                    {
+                        ProjectWindowUtil.ShowCreatedAsset(scene.GetRootGameObjects()[objectData.ObjectSceneIndex]);
                     }
                 }
                 GUILayout.EndHorizontal();
