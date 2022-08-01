@@ -65,13 +65,16 @@ namespace AssetChecker
                 if (GUILayout.Button(buttonImage, GUILayout.Height(25), GUILayout.Width(25)))
                 {
                     Object obj = AssetDatabase.LoadAssetAtPath<Object>(data.ObjectPath);
-                    if (data.Component == AssetChecker.UNKNOWN)
+                    if (obj)
                     {
-                        AssetDatabase.OpenAsset(obj);
-                    }
-                    else
-                    {
-                        ProjectWindowUtil.ShowCreatedAsset(obj);
+                        if (data.Component == AssetChecker.UNKNOWN)
+                        {
+                            AssetDatabase.OpenAsset(obj);
+                        }
+                        else
+                        {
+                            ProjectWindowUtil.ShowCreatedAsset(obj);
+                        }
                     }
                 }
                 GUILayout.EndHorizontal();
@@ -97,12 +100,16 @@ namespace AssetChecker
                         if (EditorUtility.DisplayDialog("Warning", $"Load {objectData.SceneName} scene?", "Yes", "No"))
                         {
                             scene = EditorSceneManager.OpenScene(objectData.ScenePath, OpenSceneMode.Single);
-                            ProjectWindowUtil.ShowCreatedAsset(scene.GetRootGameObjects()[objectData.ObjectSceneIndex]);
+                            var obj = scene.GetRootGameObjects()[objectData.ObjectSceneIndex];
+                            if (obj)
+                                ProjectWindowUtil.ShowCreatedAsset(obj);
                         }
                     }
                     else
                     {
-                        ProjectWindowUtil.ShowCreatedAsset(scene.GetRootGameObjects()[objectData.ObjectSceneIndex]);
+                        var obj = scene.GetRootGameObjects()[objectData.ObjectSceneIndex];
+                        if (obj)
+                            ProjectWindowUtil.ShowCreatedAsset(obj);
                     }
                 }
                 GUILayout.EndHorizontal();
