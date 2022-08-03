@@ -41,8 +41,7 @@ namespace AssetChecker
                     isCheckInProgress = true;
                     assetObjects = new List<MissingObjectData>();
                     sceneObjects = new List<MissingObjectData>();
-                    RunAssetsCheck();
-                    RunSceneObjectsCheck();
+                    RunCheck();
                     isCheckInProgress = false;
                     ShowResult();
                 }
@@ -54,35 +53,43 @@ namespace AssetChecker
             resultWindow = AssetCheckerResult.ShowResult(assetObjects, sceneObjects);
         }
 
-        private void RunAssetsCheck()
+        private void RunCheck()
         {
             string[] paths = AssetDatabase.GetAllAssetPaths();
             for (int i = 0; i < paths.Length; i++)
             {
                 string path = paths[i];
-                GameObject obj = AssetDatabase.LoadAssetAtPath<GameObject>(path);
+                Object obj = AssetDatabase.LoadAssetAtPath<Object>(path);
                 if (obj)
                 {
-                    CheckGameObject(path, obj);
-                }
-            }           
-        }
-
-        private void RunSceneObjectsCheck()
-        {
-            for (int i = 0; i < EditorBuildSettings.scenes.Length; i++)
-            {
-                var scnConf = EditorBuildSettings.scenes[i];
-                Scene scene = EditorSceneManager.OpenScene(scnConf.path);
-                GameObject[] sceneRootObjects = scene.GetRootGameObjects();
-                for (int j = 0; j < sceneRootObjects.Length; j++)
-                {
-                    GameObject obj = sceneRootObjects[j];
-                    CheckGameObject(scene.name, scene.path, obj, j);
+                    System.Type type = obj.GetType();
+                    if (type == typeof(GameObject))
+                    {
+                        CheckGameObject(path, obj as GameObject);
+                    }
+                    else if (type == typeof(SceneAsset))
+                    {
+                        CheckScene(path);
+                    }
+                    else if (type.BaseType == typeof(ScriptableObject))
+                    {
+                        CheckObjectProperties(path, obj);
+                    }
                 }
             }
         }
-        
+
+        private void CheckScene(string path)
+        {
+            Scene scene = EditorSceneManager.OpenScene(path);
+            GameObject[] sceneRootObjects = scene.GetRootGameObjects();
+            for (int j = 0; j < sceneRootObjects.Length; j++)
+            {
+                GameObject obj = sceneRootObjects[j];
+                CheckGameObject(scene.name, path, obj, j);
+            }
+        }
+
         private void CheckGameObject(string assetPath, GameObject obj)
         {
             var components = obj.GetComponents<Component>();
@@ -92,7 +99,7 @@ namespace AssetChecker
                 if (!component)
                     assetObjects.Add(new MissingObjectData(assetPath, obj.name, UNKNOWN));
                 else
-                    CheckComponentProperties(assetPath, component);
+                    CheckObjectProperties(assetPath, component);
             }
             for (int i = 0; i < obj.transform.childCount; i++)
             {
@@ -110,7 +117,7 @@ namespace AssetChecker
                 if (!component)
                     sceneObjects.Add(new MissingObjectData(scenePath, sceneName, obj.name, UNKNOWN, objIndex));
                 else
-                    CheckComponentProperties(scenePath, sceneName, obj.name, component, objIndex);
+                    CheckObjectProperties(scenePath, sceneName, obj.name, component, objIndex);
             }
             for (int i = 0; i < obj.transform.childCount; i++)
             {
@@ -119,9 +126,9 @@ namespace AssetChecker
             }
         }
 
-        private void CheckComponentProperties(string assetPath, Component comp)
+        private void CheckObjectProperties(string assetPath, Object obj)
         {
-            var serializedObject = new SerializedObject(comp);
+            var serializedObject = new SerializedObject(obj);
             var serializedProperty = serializedObject.GetIterator();
             while (serializedProperty.NextVisible(true))
             {
@@ -129,14 +136,14 @@ namespace AssetChecker
                     && serializedProperty.objectReferenceValue == null
                     && serializedProperty.objectReferenceInstanceIDValue != 0)
                 {
-                    assetObjects.Add(new MissingObjectData(assetPath, comp.name, comp.GetType().Name));
+                    assetObjects.Add(new MissingObjectData(assetPath, obj.name, obj.GetType().Name));
                 }
             }
         }
 
-        private void CheckComponentProperties(string scenePath, string sceneName, string ownerName, Component comp, int objIndex)
+        private void CheckObjectProperties(string scenePath, string sceneName, string ownerName, Object obj, int objIndex)
         {
-            var serializedObject = new SerializedObject(comp);
+            var serializedObject = new SerializedObject(obj);
             var serializedProperty = serializedObject.GetIterator();
             while (serializedProperty.NextVisible(true))
             {
@@ -144,7 +151,7 @@ namespace AssetChecker
                     && serializedProperty.objectReferenceValue == null
                     && serializedProperty.objectReferenceInstanceIDValue != 0)
                 {
-                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, ownerName, comp.GetType().Name, objIndex));
+                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, ownerName, obj.GetType().Name, objIndex));
                 }
             }
         }
