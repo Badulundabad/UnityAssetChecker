@@ -99,15 +99,15 @@ namespace AssetChecker
                     {
                         if (EditorUtility.DisplayDialog("Warning", $"Load {objectData.SceneName} scene?", "Yes", "No"))
                         {
-                            scene = EditorSceneManager.OpenScene(objectData.ScenePath, OpenSceneMode.Single);
-                            var obj = scene.GetRootGameObjects()[objectData.ObjectSceneIndex];
+                            EditorSceneManager.OpenScene(objectData.ScenePath, OpenSceneMode.Single);
+                            Object obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(objectData.ObjectId);
                             if (obj)
                                 ProjectWindowUtil.ShowCreatedAsset(obj);
                         }
                     }
                     else
                     {
-                        var obj = scene.GetRootGameObjects()[objectData.ObjectSceneIndex];
+                        Object obj = GlobalObjectId.GlobalObjectIdentifierToObjectSlow(objectData.ObjectId);
                         if (obj)
                             ProjectWindowUtil.ShowCreatedAsset(obj);
                     }
