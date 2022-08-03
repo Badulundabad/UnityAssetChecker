@@ -1,5 +1,10 @@
 # Unity Asset Checker
-A tool that looks for missing references in your Asset folder.
+This is a tool for Unity Editor to look for missing references in assets.
+
+## Supported types ##
+- GameObject (with any components inside)
+- Scene (with objects inside)
+- Material
 
 ## How to use ##
 
@@ -9,7 +14,7 @@ A tool that looks for missing references in your Asset folder.
 
 2) Press *"Check assets"* button to run check
 
-3) Since the check is finished you see a new window with two hidden lists
+3) Since the check is finished you see a new window with two collapsed lists
 
 ![image](https://user-images.githubusercontent.com/62873054/182186385-4e473688-7fe8-4b4e-bee7-a9284adf8732.png)
 
@@ -39,5 +44,3 @@ Structure of list elements:
     - `serializedProperty.propertyType == SerializedPropertyType.ObjectReference` (property derives from `UnityEngine.Object`)
     - `serializedProperty.objectReferenceInstanceIDValue != 0` (property has value)
     - `serializedProperty.objectReferenceValue == null` (has no or missed reference)
-
-I used this logic, cause of the only one way i found.
