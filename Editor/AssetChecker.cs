@@ -71,7 +71,7 @@ namespace AssetChecker
                     {
                         CheckScene(path);
                     }
-                    else if (type.BaseType == typeof(ScriptableObject))
+                    else if (type == typeof(Material) || type.BaseType == typeof(ScriptableObject))
                     {
                         CheckObjectProperties(path, obj);
                     }
