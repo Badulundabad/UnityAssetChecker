@@ -86,7 +86,7 @@ namespace AssetChecker
             for (int j = 0; j < sceneRootObjects.Length; j++)
             {
                 GameObject obj = sceneRootObjects[j];
-                CheckGameObject(scene.name, path, obj, j);
+                CheckGameObject(scene.name, path, obj);
             }
         }
 
@@ -108,21 +108,24 @@ namespace AssetChecker
             }
         }
 
-        private void CheckGameObject(string sceneName, string scenePath, GameObject obj, int objIndex)
+        private void CheckGameObject(string sceneName, string scenePath, GameObject obj)
         {
             var components = obj.GetComponents<Component>();
             for (int i = 0; i < components.Length; i++)
             {
                 var component = components[i];
                 if (!component)
-                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, obj.name, UNKNOWN, objIndex));
+                {
+                    var id = GlobalObjectId.GetGlobalObjectIdSlow(obj);
+                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, obj.name, UNKNOWN, id));
+                }
                 else
-                    CheckObjectProperties(scenePath, sceneName, obj.name, component, objIndex);
+                    CheckObjectProperties(scenePath, sceneName, obj, component);
             }
             for (int i = 0; i < obj.transform.childCount; i++)
             {
                 GameObject child = obj.transform.GetChild(i).gameObject;
-                CheckGameObject(scenePath, sceneName, child, objIndex);
+                CheckGameObject(scenePath, sceneName, child);
             }
         }
 
@@ -141,7 +144,7 @@ namespace AssetChecker
             }
         }
 
-        private void CheckObjectProperties(string scenePath, string sceneName, string ownerName, Object obj, int objIndex)
+        private void CheckObjectProperties(string scenePath, string sceneName, GameObject owner, Object obj)
         {
             var serializedObject = new SerializedObject(obj);
             var serializedProperty = serializedObject.GetIterator();
@@ -151,7 +154,8 @@ namespace AssetChecker
                     && serializedProperty.objectReferenceValue == null
                     && serializedProperty.objectReferenceInstanceIDValue != 0)
                 {
-                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, ownerName, obj.GetType().Name, objIndex));
+                    var id = GlobalObjectId.GetGlobalObjectIdSlow(owner);
+                    sceneObjects.Add(new MissingObjectData(scenePath, sceneName, owner.name, obj.GetType().Name, id));
                 }
             }
         }

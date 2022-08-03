@@ -1,4 +1,6 @@
-﻿namespace AssetChecker
+﻿using UnityEditor;
+
+namespace AssetChecker
 {
     public struct MissingObjectData
     {
@@ -7,7 +9,7 @@
         public readonly string ObjectPath;
         public readonly string ObjectName;
         public readonly string Component;
-        public readonly int ObjectSceneIndex;
+        public readonly GlobalObjectId ObjectId;
 
         public MissingObjectData(string objectPath, string objectName, string componentType)
         {
@@ -16,17 +18,17 @@
             ObjectPath = objectPath;
             ObjectName = objectName;
             Component = componentType;
-            ObjectSceneIndex = -1;
+            ObjectId = new GlobalObjectId();
         }
 
-        public MissingObjectData(string scenePath, string sceneName, string objectName, string componentType, int objectIndex)
+        public MissingObjectData(string scenePath, string sceneName, string objectName, string componentType, GlobalObjectId objectId)
         {
             ScenePath = scenePath;
             SceneName = sceneName;
             ObjectPath = string.Empty;
             ObjectName = objectName;
             Component = componentType;
-            ObjectSceneIndex = objectIndex;
+            ObjectId = objectId;
         }
     }
 }
